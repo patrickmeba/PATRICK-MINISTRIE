@@ -12,15 +12,13 @@
     .card { background: #fff; border-radius: 10px; padding: 18px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
     input, textarea { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 10px; font-family: inherit; }
     textarea { min-height: 180px; resize: vertical; }
-    button { background: #1e3a8a; color: #fff; border: 0; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; margin-right: 6px; }
-    button.gris { background: #6b7280; }
+    button { background: #1e3a8a; color: #fff; border: 0; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; }
     button.suppr { background: #b91c1c; padding: 6px 12px; font-size: 14px; }
     .note { border-bottom: 1px solid #eee; padding: 12px 0; }
     .note h3 { margin: 0 0 4px; }
     .note small { color: #666; }
     .note p { white-space: pre-wrap; margin: 8px 0; }
     .msg { margin-top: 10px; font-size: 14px; color: #b91c1c; }
-    .cache { display: none; }
   </style>
 </head>
 <body>
@@ -29,44 +27,28 @@
   </header>
 
   <main>
-    <!-- Connexion -->
-    <div id="vueConnexion" class="card">
-      <h2>Connexion</h2>
-      <input id="email" type="email" placeholder="Adresse mail">
-      <input id="mdp" type="password" placeholder="Mot de passe (6 caractères minimum)">
-      <button id="btnConnexion">Se connecter</button>
-      <button id="btnCreer" class="gris">Créer mon compte</button>
-      <div id="msgConnexion" class="msg"></div>
+    <div class="card">
+      <h2 style="margin-top:0">Nouvelle note</h2>
+      <input id="titre" placeholder="Titre de la note">
+      <textarea id="texte" placeholder="Écrivez votre note ici..."></textarea>
+      <button id="btnSauver">Enregistrer</button>
+      <div id="msgNotes" class="msg"></div>
     </div>
 
-    <!-- Bloc-notes -->
-    <div id="vueNotes" class="cache">
-      <div class="card">
-        <p>Connecté : <strong id="quiEstLa"></strong>
-          <button id="btnDeco" class="gris" style="float:right">Déconnexion</button></p>
-        <input id="titre" placeholder="Titre de la note">
-        <textarea id="texte" placeholder="Écrivez votre note ici..."></textarea>
-        <button id="btnSauver">Enregistrer</button>
-        <div id="msgNotes" class="msg"></div>
-      </div>
-      <div class="card">
-        <h2>Mes notes</h2>
-        <div id="liste">Chargement...</div>
-      </div>
+    <div class="card">
+      <h2 style="margin-top:0">Mes notes</h2>
+      <div id="liste">Chargement...</div>
     </div>
   </main>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword,
-             createUserWithEmailAndPassword, signOut }
-      from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, collection, addDoc, deleteDoc, doc, query,
              orderBy, onSnapshot, serverTimestamp }
       from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey: "COLLEZ_VOTRE_CLE_ICI",
+      apiKey: "AIzaSyCWgO8H51io0ttkz0GzVJP6CIKPNocrBEY",
       authDomain: "patrick-ministrie.firebaseapp.com",
       projectId: "patrick-ministrie",
       storageBucket: "patrick-ministrie.firebasestorage.app",
@@ -75,34 +57,18 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
     const db = getFirestore(app);
+    const notesRef = collection(db, "notes");
 
     const $ = (id) => document.getElementById(id);
-    let arreter = null;
 
     function erreurFr(e) {
       const c = e.code || "";
-      if (c.includes("invalid-credential") || c.includes("wrong-password") || c.includes("user-not-found")) return "Mail ou mot de passe incorrect.";
-      if (c.includes("email-already-in-use")) return "Ce mail a déjà un compte. Cliquez sur « Se connecter ».";
-      if (c.includes("weak-password")) return "Mot de passe trop court (6 caractères minimum).";
-      if (c.includes("invalid-email")) return "Adresse mail invalide.";
-      if (c.includes("operation-not-allowed")) return "Activez « Adresse e-mail/Mot de passe » dans Firebase > Authentication.";
-      if (c.includes("permission-denied")) return "Accès refusé : vérifiez les règles Firestore.";
+      if (c.includes("permission-denied")) return "Accès refusé : publiez les règles Firestore (voir étape 2).";
+      if (c.includes("api-key")) return "La clé apiKey est incorrecte. Copiez-la depuis la console Firebase.";
+      if (c.includes("failed-precondition") || c.includes("not-found")) return "Créez d'abord la base Firestore dans la console Firebase.";
       return "Erreur : " + (e.message || c);
     }
-
-    $("btnConnexion").onclick = async () => {
-      $("msgConnexion").textContent = "";
-      try { await signInWithEmailAndPassword(auth, $("email").value.trim(), $("mdp").value); }
-      catch (e) { $("msgConnexion").textContent = erreurFr(e); }
-    };
-    $("btnCreer").onclick = async () => {
-      $("msgConnexion").textContent = "";
-      try { await createUserWithEmailAndPassword(auth, $("email").value.trim(), $("mdp").value); }
-      catch (e) { $("msgConnexion").textContent = erreurFr(e); }
-    };
-    $("btnDeco").onclick = () => signOut(auth);
 
     $("btnSauver").onclick = async () => {
       const titre = $("titre").value.trim() || "Sans titre";
@@ -110,8 +76,7 @@
       if (!texte) { $("msgNotes").textContent = "Écrivez quelque chose d'abord."; return; }
       $("msgNotes").textContent = "";
       try {
-        await addDoc(collection(db, "users", auth.currentUser.uid, "notes"),
-          { titre, texte, date: serverTimestamp() });
+        await addDoc(notesRef, { titre, texte, date: serverTimestamp() });
         $("titre").value = ""; $("texte").value = "";
       } catch (e) { $("msgNotes").textContent = erreurFr(e); }
     };
@@ -131,27 +96,15 @@
         const b = document.createElement("button");
         b.className = "suppr"; b.textContent = "Supprimer";
         b.onclick = async () => {
-          if (confirm("Supprimer cette note ?"))
-            await deleteDoc(doc(db, "users", auth.currentUser.uid, "notes", d.id));
+          if (confirm("Supprimer cette note ?")) await deleteDoc(doc(db, "notes", d.id));
         };
         div.append(h, s, p, b);
         liste.appendChild(div);
       });
     }
 
-    onAuthStateChanged(auth, (user) => {
-      if (arreter) { arreter(); arreter = null; }
-      if (user) {
-        $("vueConnexion").classList.add("cache");
-        $("vueNotes").classList.remove("cache");
-        $("quiEstLa").textContent = user.email;
-        const q = query(collection(db, "users", user.uid, "notes"), orderBy("date", "desc"));
-        arreter = onSnapshot(q, afficherNotes, (e) => { $("liste").textContent = erreurFr(e); });
-      } else {
-        $("vueNotes").classList.add("cache");
-        $("vueConnexion").classList.remove("cache");
-      }
-    });
+    onSnapshot(query(notesRef, orderBy("date", "desc")), afficherNotes,
+      (e) => { $("liste").textContent = erreurFr(e); });
   </script>
 </body>
 </html>
