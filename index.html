@@ -29,7 +29,6 @@
   </header>
 
   <main>
-    <!-- Connexion -->
     <div id="vueConnexion" class="card">
       <h2>Connexion</h2>
       <input id="email" type="email" placeholder="Adresse mail">
@@ -39,7 +38,6 @@
       <div id="msgConnexion" class="msg"></div>
     </div>
 
-    <!-- Bloc-notes -->
     <div id="vueNotes" class="cache">
       <div class="card">
         <p>Connecté : <strong id="quiEstLa"></strong>
@@ -66,7 +64,7 @@
       from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey: "COLLEZ_VOTRE_CLE_ICI",
+      apiKey: "AIzaSyCWgO8H51io0ttkz0GzVJP6CIKPNocrBEY",
       authDomain: "patrick-ministrie.firebaseapp.com",
       projectId: "patrick-ministrie",
       storageBucket: "patrick-ministrie.firebasestorage.app",
@@ -83,11 +81,12 @@
 
     function erreurFr(e) {
       const c = e.code || "";
+      if (c.includes("api-key")) return "La clé apiKey est incorrecte. Recopiez-la depuis la console Firebase.";
       if (c.includes("invalid-credential") || c.includes("wrong-password") || c.includes("user-not-found")) return "Mail ou mot de passe incorrect.";
       if (c.includes("email-already-in-use")) return "Ce mail a déjà un compte. Cliquez sur « Se connecter ».";
       if (c.includes("weak-password")) return "Mot de passe trop court (6 caractères minimum).";
       if (c.includes("invalid-email")) return "Adresse mail invalide.";
-      if (c.includes("operation-not-allowed")) return "Activez « Adresse e-mail/Mot de passe » dans Firebase > Authentication.";
+      if (c.includes("operation-not-allowed")) return "Activez « Adresse e-mail/Mot de passe » dans Firebase > Authentication > Sign-in method.";
       if (c.includes("permission-denied")) return "Accès refusé : vérifiez les règles Firestore.";
       return "Erreur : " + (e.message || c);
     }
