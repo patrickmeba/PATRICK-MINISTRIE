@@ -30,18 +30,16 @@
 
   <main>
     <div id="vueConnexion" class="card">
-      <h2>Connexion</h2>
-      <input id="email" type="email" placeholder="Adresse mail">
-      <input id="mdp" type="password" placeholder="Mot de passe (6 caractères minimum)">
-      <button id="btnConnexion">Se connecter</button>
-      <button id="btnCreer" class="gris">Créer mon compte</button>
+      <h2>🔒 Accès privé</h2>
+      <input id="mdp" type="password" placeholder="Entrez le mot de passe">
+      <button id="btnConnexion">Entrer</button>
       <div id="msgConnexion" class="msg"></div>
     </div>
 
     <div id="vueNotes" class="cache">
       <div class="card">
-        <p>Connecté : <strong id="quiEstLa"></strong>
-          <button id="btnDeco" class="gris" style="float:right">Déconnexion</button></p>
+        <button id="btnDeco" class="gris" style="float:right">Quitter</button>
+        <h2 style="margin-top:0">Nouvelle note</h2>
         <input id="titre" placeholder="Titre de la note">
         <textarea id="texte" placeholder="Écrivez votre note ici..."></textarea>
         <button id="btnSauver">Enregistrer</button>
@@ -56,8 +54,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword,
-             createUserWithEmailAndPassword, signOut }
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut }
       from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
     import { getFirestore, collection, addDoc, deleteDoc, doc, query,
              orderBy, onSnapshot, serverTimestamp }
@@ -65,11 +62,15 @@
 
     const firebaseConfig = {
       apiKey: "AIzaSyCWgO8H51io0ttkz0GzVJP6CIKPNocrBEY",
-  authDomain: "patrick-ministrie.firebaseapp.com",
-  projectId: "patrick-ministrie",
-  storageBucket: "patrick-ministrie.firebasestorage.app",
-  messagingSenderId: "618899633529",
-  appId: "1:618899633529:web:30465e48499a3a47292ba8"
+      authDomain: "patrick-ministrie.firebaseapp.com",
+      projectId: "patrick-ministrie",
+      storageBucket: "patrick-ministrie.firebasestorage.app",
+      messagingSenderId: "618899633529",
+      appId: "1:618899633529:web:30465e48499a3a47292ba8"
+    };
+
+    // Adresse interne fixe (jamais affichée). Le mot de passe, lui, n'est PAS dans le code.
+    const EMAIL_INTERNE = "acces@patrick-ministrie.app";
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -81,25 +82,20 @@
     function erreurFr(e) {
       const c = e.code || "";
       if (c.includes("api-key")) return "La clé apiKey est incorrecte. Recopiez-la depuis la console Firebase.";
-      if (c.includes("invalid-credential") || c.includes("wrong-password") || c.includes("user-not-found")) return "Mail ou mot de passe incorrect.";
-      if (c.includes("email-already-in-use")) return "Ce mail a déjà un compte. Cliquez sur « Se connecter ».";
-      if (c.includes("weak-password")) return "Mot de passe trop court (6 caractères minimum).";
-      if (c.includes("invalid-email")) return "Adresse mail invalide.";
+      if (c.includes("invalid-credential") || c.includes("wrong-password") || c.includes("user-not-found")) return "Mot de passe incorrect.";
+      if (c.includes("too-many-requests")) return "Trop d'essais. Attendez quelques minutes.";
       if (c.includes("operation-not-allowed")) return "Activez « Adresse e-mail/Mot de passe » dans Firebase > Authentication > Sign-in method.";
       if (c.includes("permission-denied")) return "Accès refusé : vérifiez les règles Firestore.";
       return "Erreur : " + (e.message || c);
     }
 
-    $("btnConnexion").onclick = async () => {
+    async function entrer() {
       $("msgConnexion").textContent = "";
-      try { await signInWithEmailAndPassword(auth, $("email").value.trim(), $("mdp").value); }
+      try { await signInWithEmailAndPassword(auth, EMAIL_INTERNE, $("mdp").value); $("mdp").value = ""; }
       catch (e) { $("msgConnexion").textContent = erreurFr(e); }
-    };
-    $("btnCreer").onclick = async () => {
-      $("msgConnexion").textContent = "";
-      try { await createUserWithEmailAndPassword(auth, $("email").value.trim(), $("mdp").value); }
-      catch (e) { $("msgConnexion").textContent = erreurFr(e); }
-    };
+    }
+    $("btnConnexion").onclick = entrer;
+    $("mdp").addEventListener("keydown", (ev) => { if (ev.key === "Enter") entrer(); });
     $("btnDeco").onclick = () => signOut(auth);
 
     $("btnSauver").onclick = async () => {
@@ -142,7 +138,6 @@
       if (user) {
         $("vueConnexion").classList.add("cache");
         $("vueNotes").classList.remove("cache");
-        $("quiEstLa").textContent = user.email;
         const q = query(collection(db, "users", user.uid, "notes"), orderBy("date", "desc"));
         arreter = onSnapshot(q, afficherNotes, (e) => { $("liste").textContent = erreurFr(e); });
       } else {
