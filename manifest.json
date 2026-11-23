@@ -1,0 +1,10 @@
+{
+  "name": "PATRICK MINISTRIE — Bloc-notes",
+  "short_name": "Patrick Notes",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f6fb",
+  "theme_color": "#172554",
+  "description": "Bloc-notes personnel fonctionnant hors ligne"
+}

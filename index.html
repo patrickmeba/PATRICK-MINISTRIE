@@ -1,17 +1,104 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#172554">
+<title>PATRICK MINISTRIE — Bloc-notes</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{--navy:#172554;--blue:#1d4ed8;--bg:#f3f6fb;--ink:#172033;--muted:#64748b;--line:#dbe3ef}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--navy);color:white;padding:22px 18px;text-align:center}
+header h1{font-size:1.25rem;letter-spacing:.06em;margin:0 0 5px}header p{margin:0;color:#cbd5e1;font-size:.85rem}
+main{max-width:900px;margin:22px auto;padding:0 14px}
+.panel{background:white;border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 5px 18px #0f172a0b}
+.hidden{display:none!important}.center{text-align:center}.muted{color:var(--muted);font-size:.9rem}
+label{display:block;font-weight:600;margin:12px 0 6px}
+input,textarea{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font:inherit;background:white}
+textarea{min-height:180px;resize:vertical}
+button{border:0;border-radius:10px;padding:11px 15px;background:var(--blue);color:white;font-weight:650;font:inherit;cursor:pointer}
+button.secondary{background:#e8eef8;color:var(--navy)}button.danger{background:#b91c1c}
+button:disabled{opacity:.55;cursor:not-allowed}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.note{border:1px solid var(--line);border-radius:12px;padding:13px;margin-top:10px;background:#fff}
+.note h3{margin:0 0 5px;font-size:1rem}.note p{margin:0;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.note small{color:var(--muted)}
+#status{margin-top:12px;font-size:.9rem;color:var(--muted)}
+.warning{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;color:#9a3412;font-size:.88rem}
+footer{text-align:center;color:var(--muted);font-size:.8rem;padding:24px}
+</style>
+</head>
+<body>
+<header><h1>PATRICK MINISTRIE</h1><p>Bloc-notes numérique — mode hors ligne</p></header>
+<main>
+<section id="gate" class="panel">
+  <h2 id="gateTitle">Accès sécurisé</h2>
+  <p id="gateText" class="muted">Saisissez votre mot de passe pour ouvrir votre espace personnel.</p>
+  <div class="warning">Lors de la première utilisation sur chaque appareil, choisissez le même mot de passe. Ne l'oubliez pas : il ne peut pas être récupéré par le service.</div>
+  <label for="password">Mot de passe</label>
+  <input id="password" type="password" autocomplete="current-password" placeholder="8 caractères minimum" />
+  <div class="actions"><button id="unlockBtn">Ouvrir l’application</button></div>
+  <p id="gateError" role="alert" style="color:#b91c1c"></p>
+</section>
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyCWgO8H51io0ttkz0GzVJP6CIKPNocrBEY",
-  authDomain: "patrick-ministrie.firebaseapp.com",
-  projectId: "patrick-ministrie",
-  storageBucket: "patrick-ministrie.firebasestorage.app",
-  messagingSenderId: "618899633529",
-  appId: "1:618899633529:web:30465e48499a3a47292ba8"
-};
+<section id="app" class="hidden">
+  <div class="panel">
+    <div class="row"><div><h2 style="margin:0">Mes développements</h2><span class="muted">Vos notes restent sur cet appareil hors ligne.</span></div><button class="secondary" id="lockBtn">Verrouiller</button></div>
+    <label for="search">Rechercher</label><input id="search" type="search" placeholder="Rechercher dans vos notes…">
+    <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+    <h3 id="editorTitle">Nouvelle note</h3>
+    <label for="title">Titre</label><input id="title" maxlength="160" placeholder="Titre du développement">
+    <label for="bodyText">Contenu</label><textarea id="bodyText" placeholder="Écrivez votre développement ici…"></textarea>
+    <div class="actions"><button id="saveBtn">Enregistrer</button><button class="secondary" id="newBtn">Nouvelle note</button></div>
+    <p id="status" aria-live="polite"></p>
+  </div>
+  <div class="panel" style="margin-top:16px"><h2 style="margin-top:0">Mes notes enregistrées</h2><div id="notes"></div></div>
+</section>
+</main>
+<footer>Patrick Ministrie · Application personnelle</footer>
+<script>
+const DB_NAME='patrick-ministrie-local', STORE='vault', KEY='main';
+let db, cryptoKey=null, notes=[], editingId=null;
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE);r.onsuccess=()=>{db=r.result;resolve()};r.onerror=()=>reject(r.error)})}
+function getRecord(){return new Promise((resolve,reject)=>{const r=db.transaction(STORE).objectStore(STORE).get(KEY);r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error)})}
+function putRecord(value){return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(value,KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}
+function deriveKey(password,salt){return crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveKey']).then(k=>crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:310000,hash:'SHA-256'},k,{name:'AES-GCM',length:256},false,['encrypt','decrypt']))}
+async function encryptVault(){const iv=crypto.getRandomValues(new Uint8Array(12));const data=new TextEncoder().encode(JSON.stringify({notes}));const cipher=await crypto.subtle.encrypt({name:'AES-GCM',iv},cryptoKey,data);const rec=await getRecord();await putRecord({salt:rec.salt,iv:Array.from(iv),cipher:Array.from(new Uint8Array(cipher)),version:1})}
+async function unlock(){
+ const password=document.getElementById('password').value;
+ const error=document.getElementById('gateError');error.textContent='';
+ if(password.length<8){error.textContent='Choisissez un mot de passe d’au moins 8 caractères.';return}
+ try{
+  const rec=await getRecord();
+  if(!rec){const salt=crypto.getRandomValues(new Uint8Array(16));cryptoKey=await deriveKey(password,salt);await putRecord({salt:Array.from(salt),iv:[],cipher:[],version:1});notes=[];await encryptVault();}
+  else{cryptoKey=await deriveKey(password,new Uint8Array(rec.salt));const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:new Uint8Array(rec.iv)},cryptoKey,new Uint8Array(rec.cipher));const parsed=JSON.parse(new TextDecoder().decode(plain));notes=Array.isArray(parsed.notes)?parsed.notes:[]}
+  document.getElementById('gate').classList.add('hidden');document.getElementById('app').classList.remove('hidden');document.getElementById('password').value='';render();
+ }catch(e){cryptoKey=null;error.textContent='Mot de passe incorrect ou données locales illisibles.'}
+}
+function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function render(){
+ const q=document.getElementById('search').value.toLowerCase();const host=document.getElementById('notes');host.innerHTML='';
+ const filtered=notes.filter(n=>(n.title+' '+n.body).toLowerCase().includes(q)).sort((a,b)=>b.updated-a.updated);
+ if(!filtered.length){host.innerHTML='<p class="muted">Aucune note trouvée. Créez votre première note ci-dessus.</p>';return}
+ filtered.forEach(n=>{const el=document.createElement('article');el.className='note';el.innerHTML=`<div class="row"><div><h3>${escapeHTML(n.title||'Sans titre')}</h3><small>${new Date(n.updated).toLocaleString('fr-FR')}</small></div><div class="actions"><button class="secondary" data-edit="${n.id}">Modifier</button><button class="danger" data-delete="${n.id}">Supprimer</button></div></div><p>${escapeHTML(n.body)}</p>`;host.appendChild(el)});
+ host.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>editNote(b.dataset.edit));
+ host.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>deleteNote(b.dataset.delete));
+}
+function resetEditor(){editingId=null;document.getElementById('title').value='';document.getElementById('bodyText').value='';document.getElementById('editorTitle').textContent='Nouvelle note';}
+function editNote(id){const n=notes.find(x=>x.id===id);if(!n)return;editingId=id;document.getElementById('title').value=n.title;document.getElementById('bodyText').value=n.body;document.getElementById('editorTitle').textContent='Modifier la note';window.scrollTo({top:0,behavior:'smooth'})}
+async function deleteNote(id){if(!confirm('Supprimer cette note ?'))return;notes=notes.filter(n=>n.id!==id);await encryptVault();render();document.getElementById('status').textContent='Note supprimée de cet appareil.'}
+async function saveNote(){const title=document.getElementById('title').value.trim();const body=document.getElementById('bodyText').value.trim();if(!title&&!body){document.getElementById('status').textContent='Écrivez un titre ou un contenu.';return}
+ const now=Date.now();if(editingId){const n=notes.find(x=>x.id===editingId);n.title=title;n.body=body;n.updated=now}else{notes.push({id:crypto.randomUUID(),title,body,updated:now})}
+ await encryptVault();resetEditor();render();document.getElementById('status').textContent='Note enregistrée et chiffrée sur cet appareil.'}
+function lock(){cryptoKey=null;notes=[];document.getElementById('app').classList.add('hidden');document.getElementById('gate').classList.remove('hidden');document.getElementById('gateTitle').textContent='Accès sécurisé';document.getElementById('gateText').textContent='Saisissez votre mot de passe pour ouvrir votre espace personnel.'}
+document.getElementById('unlockBtn').onclick=unlock;document.getElementById('password').addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
+document.getElementById('saveBtn').onclick=saveNote;document.getElementById('newBtn').onclick=resetEditor;document.getElementById('lockBtn').onclick=lock;document.getElementById('search').oninput=render;
+(async()=>{try{await openDB();const r=await getRecord();if(!r){document.getElementById('gateTitle').textContent='Créer votre mot de passe';document.getElementById('gateText').textContent='Première utilisation sur cet appareil : créez le mot de passe que vous utiliserez aussi sur votre autre appareil.';document.getElementById('unlockBtn').textContent='Créer et ouvrir';}}catch(e){document.getElementById('gateError').textContent='Ce navigateur ne permet pas le stockage local sécurisé.'}
+ if('serviceWorker' in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
