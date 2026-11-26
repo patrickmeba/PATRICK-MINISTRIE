@@ -1,0 +1,74 @@
+{
+ "id": "/",
+ "name": "PATRICK MINISTRIE",
+ "short_name": "P. MINISTRIE",
+ "description": "Bloc-notes des sujets : protégé par mot de passe, utilisable hors ligne et synchronisé avec Google.",
+ "lang": "fr",
+ "dir": "ltr",
+ "start_url": "/?source=pwa",
+ "scope": "/",
+ "display": "standalone",
+ "display_override": [
+  "standalone",
+  "minimal-ui"
+ ],
+ "orientation": "any",
+ "background_color": "#0b0b0d",
+ "theme_color": "#1b1b1d",
+ "categories": [
+  "productivity",
+  "education",
+  "lifestyle"
+ ],
+ "prefer_related_applications": false,
+ "icons": [
+  {
+   "src": "/icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "/icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "/icon-maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ],
+ "screenshots": [
+  {
+   "src": "/capture-mobile-accueil.jpg",
+   "sizes": "780x1688",
+   "type": "image/jpeg",
+   "form_factor": "narrow",
+   "label": "Accueil"
+  },
+  {
+   "src": "/capture-mobile-notes.jpg",
+   "sizes": "780x1688",
+   "type": "image/jpeg",
+   "form_factor": "narrow",
+   "label": "Liste des sujets"
+  },
+  {
+   "src": "/capture-pc-accueil.jpg",
+   "sizes": "1280x720",
+   "type": "image/jpeg",
+   "form_factor": "wide",
+   "label": "Accueil"
+  },
+  {
+   "src": "/capture-pc-notes.jpg",
+   "sizes": "1280x720",
+   "type": "image/jpeg",
+   "form_factor": "wide",
+   "label": "Liste des sujets"
+  }
+ ]
+}

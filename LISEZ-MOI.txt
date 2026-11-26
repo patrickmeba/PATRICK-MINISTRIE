@@ -1,0 +1,16 @@
+BLOC-NOTES PATRICK MINISTRIE - MISE EN LIGNE
+=============================================
+
+1) Ce dossier contient tout ce qu'il faut. Ne changez pas les noms des fichiers.
+2) Double-cliquez sur deploy.bat (Node.js et firebase-tools doivent etre installes,
+   et vous devez etre connecte avec : firebase login --no-localhost).
+3) Attendez "Deploy complete!".
+4) Ouvrez https://patrick-ministrie.web.app
+
+Fichiers :
+- index.html            : le bloc-notes
+- sw.js                 : mode hors ligne
+- manifest.webmanifest  : installation comme application
+- icon-*.png, favicon.ico : logo (votre photo)
+- firebase.json, .firebaserc : configuration de l'hebergement (projet patrick-ministrie)
+- deploy.bat            : mise en ligne en un double-clic
