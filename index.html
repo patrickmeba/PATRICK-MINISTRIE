@@ -502,12 +502,8 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});
 })();
 </script>
 <script>if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
-<!-- ===== DEUX VOLETS : SUJETS À GAUCHE / DÉVELOPPEMENT À DROITE (réglable) ===== -->
+<!-- ===== DEUX VOLETS + IMPORT WORD/PDF (réglages dans ⚙ Paramètres) ===== -->
 <style id="pm-volets-css">
-#vb{display:flex;flex-wrap:wrap;gap:6px;margin:8px auto 0;max-width:760px}
-#vb #vimp{flex:1 1 100%;background:var(--hb)}
-#vb button{flex:1;border:1px solid var(--ln);background:var(--card);color:var(--tx);border-radius:10px;padding:8px 4px;font:600 12px system-ui,sans-serif;cursor:pointer}
-#vb button.on{background:var(--ac);color:var(--bg);border-color:var(--ac)}
 #rz{display:none;position:fixed;top:var(--pt,90px);bottom:0;left:calc(var(--lw,300px) - 8px);width:16px;z-index:5;cursor:col-resize;touch-action:none}
 #rz i{position:absolute;left:7px;top:0;bottom:0;width:2px;background:var(--ln)}
 #rz::after{content:"⋮";position:absolute;top:50%;left:0;width:16px;height:44px;margin-top:-22px;display:flex;align-items:center;justify-content:center;background:var(--card);border:1px solid var(--ln);border-radius:8px;color:var(--ac);font:700 18px system-ui,sans-serif}
@@ -515,16 +511,14 @@ body.drag{user-select:none;-webkit-user-select:none}
 body.split{overflow:hidden}
 body.split #rz{display:block}
 body.only #rz{left:0}
-body.split .row,body.split #info,body.split #vb{max-width:none}
+body.split .row,body.split #info{max-width:none}
 body.split main{max-width:none;margin:0;padding:0}
-/* volet gauche = liste des sujets */
 body.split #m{position:fixed;left:0;top:var(--pt,90px);bottom:0;width:var(--lw,300px);overflow-x:hidden;overflow-y:auto;padding:8px 10px calc(16px + env(safe-area-inset-bottom,0px)) 8px;z-index:3;background:var(--bg);-webkit-overflow-scrolling:touch}
 body.only #m{width:0;padding:0;overflow:hidden;visibility:hidden}
 body.split .s{margin:5px 0;border-radius:10px}
 body.split .s>.h{min-height:44px;padding:9px 12px;font-size:13px;line-height:1.35}
 body.split .s.sel{border-color:var(--ac)}
 body.split .s.sel>.h{background:var(--hb)}
-/* volet droit = développement du sujet choisi */
 body.split .s>.b{display:none!important}
 body.split .s.sel>.b{display:block!important;position:fixed;left:var(--lw,300px);right:0;top:var(--pt,90px);bottom:0;overflow-y:auto;border:0;background:var(--bg);padding:0 clamp(12px,2.5vw,30px) calc(70px + env(safe-area-inset-bottom,0px));z-index:1;visibility:visible;-webkit-overflow-scrolling:touch}
 body.split .s.sel>.b>*{max-width:800px;margin-left:auto;margin-right:auto}
@@ -535,14 +529,10 @@ body.split .s.sel>.b>*{max-width:800px;margin-left:auto;margin-right:auto}
 </style>
 <script id="pm-volets-js">
 (()=>{
-const $=id=>document.getElementById(id),m=$('m'),hd=document.querySelector('header'),root=document.documentElement;
+const $=id=>document.getElementById(id),m=$('m'),hd=document.querySelector('header'),root=document.documentElement,st=$('st');
 const g=k=>{try{return localStorage.getItem(k)}catch(e){return null}},w=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
-let view=g('pm_view')||'split',pct=+g('pm_lw')||(innerWidth<700?42:32),cur=null;
-/* boutons de mode */
-const bar=document.createElement('div');bar.id='vb';
-[['split','◧ Sujets + contenu'],['only','▣ Contenu seul'],['classic','☰ Classique']].forEach(([v,t])=>{
- const b=document.createElement('button');b.type='button';b.textContent=t;b.dataset.v=v;b.onclick=()=>setView(v);bar.append(b)});
-hd.append(bar);
+const defW=()=>innerWidth<700?42:32;
+let view=g('pm_view')||'split',pct=+g('pm_lw')||defW(),cur=null;
 const rz=document.createElement('div');rz.id='rz';rz.innerHTML='<i></i>';document.body.append(rz);
 function layout(){
  root.style.setProperty('--pt',Math.round(hd.getBoundingClientRect().bottom)+'px');
@@ -550,7 +540,7 @@ function layout(){
 }
 function apply(){
  const b=document.body;b.classList.toggle('split',view!=='classic');b.classList.toggle('only',view==='only');
- bar.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.v===view));layout();
+ document.querySelectorAll('.pmv [data-v]').forEach(x=>x.classList.toggle('on',x.dataset.v===view));layout();
 }
 const cards=()=>[...m.querySelectorAll(':scope>.s[data-k]')];
 function head(k,L){
@@ -572,23 +562,21 @@ function pick(k,top){
   if(terms.length)setTimeout(()=>{const mk=b.querySelector('mark');if(mk)mk.scrollIntoView({block:'center'})},40)}
 }
 function setView(v){view=v;w('pm_view',v);apply();if(v!=='classic'){scrollTo(0,0);pick(cur,false)}}
-/* clic sur un sujet : afficher son développement à droite */
 m.addEventListener('click',e=>{
  if(view==='classic')return;
  const t=e.target.closest('[data-a="tg"]');if(!t)return;
  e.stopImmediatePropagation();e.preventDefault();pick(t.dataset.k,true);
 },true);
-/* après chaque rafraîchissement (recherche, modification…) garder le sujet affiché */
 const R=window.render;
 window.render=function(){
- const b=m.querySelector('.s.sel>.b'),st=b?b.scrollTop:0,k=cur;
+ const b=m.querySelector('.s.sel>.b'),sc=b?b.scrollTop:0,k=cur;
  R.apply(this,arguments);
  if(view==='classic')return;
  pick(k,false);
- const nb=m.querySelector('.s.sel>.b');if(nb&&k===cur)nb.scrollTop=st;
+ const nb=m.querySelector('.s.sel>.b');if(nb&&k===cur)nb.scrollTop=sc;
  layout();
 };
-/* curseur de réglage de la largeur */
+/* poignée de réglage de la largeur */
 let dr=false;
 rz.addEventListener('pointerdown',e=>{if(view==='classic')return;dr=true;rz.setPointerCapture(e.pointerId);document.body.classList.add('drag');e.preventDefault()});
 rz.addEventListener('pointermove',e=>{if(!dr)return;
@@ -596,14 +584,13 @@ rz.addEventListener('pointermove',e=>{if(!dr)return;
  if(p<6)view='only';else{view='split';pct=p}apply()});
 const end=()=>{if(!dr)return;dr=false;document.body.classList.remove('drag');w('pm_lw',String(pct));w('pm_view',view);if(view!=='classic')pick(cur,false)};
 rz.addEventListener('pointerup',end);rz.addEventListener('pointercancel',end);
-rz.addEventListener('dblclick',()=>{pct=innerWidth<700?42:32;setView('split')});
+rz.addEventListener('dblclick',()=>{pct=defW();w('pm_lw',String(pct));setView('split')});
 addEventListener('resize',layout);addEventListener('orientationchange',()=>setTimeout(layout,200));
 if(window.ResizeObserver)new ResizeObserver(layout).observe(hd);
 
 /* ===== Import Word (.docx) / PDF -> nouveau sujet ===== */
 const lib=u=>new Promise((ok,ko)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=()=>ko(new Error('net'));document.head.append(s)});
 const fi=document.createElement('input');fi.type='file';fi.hidden=true;fi.accept='.docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document';document.body.append(fi);
-const ib=document.createElement('button');ib.type='button';ib.id='vimp';ib.textContent='📄 Importer Word / PDF → nouveau sujet';ib.onclick=()=>fi.click();bar.append(ib);
 async function readDocx(buf){
  if(!window.mammoth)await lib('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js');
  const r=await mammoth.extractRawText({arrayBuffer:buf});
@@ -630,7 +617,7 @@ async function readPdf(buf){
 }
 fi.onchange=async()=>{
  const f=fi.files[0];fi.value='';if(!f)return;
- const nm=f.name,ext=nm.split('.').pop().toLowerCase(),inf=document.getElementById('info');
+ const nm=f.name,ext=nm.split('.').pop().toLowerCase(),inf=$('info');
  if(ext!=='docx'&&ext!=='pdf'){alert('Choisissez un fichier Word (.docx) ou PDF (.pdf). Un ancien .doc doit d’abord être enregistré en .docx.');return}
  let P;
  try{inf.textContent='Lecture de '+nm+'…';const buf=await f.arrayBuffer();P=ext==='pdf'?await readPdf(buf):await readDocx(buf)}
@@ -643,9 +630,30 @@ fi.onchange=async()=>{
  OP.add('c'+id);q.value='';chg();
  if(view!=='classic')pick('c'+id,true);
 };
+
+/* ===== Section ajoutée dans ⚙ Paramètres (avant « Compte et sécurité ») ===== */
+function E(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function inject(){
+ if(st.querySelector('.pmv'))return;
+ const box=E('div','pmv');
+ box.append(E('h4','sec','Affichage des sujets'));
+ const ch=E('div','ch');
+ [['split','◧ Sujets + contenu'],['only','▣ Contenu seul'],['classic','☰ Classique']].forEach(([v,t])=>{
+  const b=E('button',null,t);b.type='button';b.dataset.v=v;b.onclick=()=>{setView(v);st.close()};ch.append(b)});
+ box.append(ch,E('p','hn','Glissez la poignée ⋮ entre les deux volets pour régler la largeur (tout à gauche = contenu seul).'));
+ const a1=E('div','ac'),rs=E('button',null,'Rétablir la largeur par défaut');rs.type='button';
+ rs.onclick=()=>{pct=defW();w('pm_lw',String(pct));setView('split');st.close()};a1.append(rs);box.append(a1);
+ box.append(E('h4','sec','Importer un document'),E('p','hn','Word (.docx) ou PDF : crée un nouveau sujet avec le texte du fichier.'));
+ const a2=E('div','ac'),ib=E('button',null,'📄 Importer Word / PDF → nouveau sujet');ib.type='button';
+ ib.onclick=()=>{st.close();fi.click()};a2.append(ib);box.append(a2);
+ const h=[...st.querySelectorAll('h4.sec')].find(x=>/Compte et s/.test(x.textContent));
+ if(h)h.before(box);else st.append(box);
+ apply();
+}
+new MutationObserver(inject).observe(st,{childList:true});
 setView(view);
 })();
 </script>
-<!-- ===== FIN DEUX VOLETS ===== -->
+<!-- ===== FIN ===== -->
 
 </body></html>
